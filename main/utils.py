@@ -14,17 +14,26 @@ axis_str = ['x', 'y', 'z']
 error = {'lstm': [{}, {}, {}], 'reg': [{}, {}, {}]}
 result_dir = '../result/'
 
+
 def init_error():
     error = {'lstm': [{}, {}, {}], 'reg': [{}, {}, {}]}
 
-def predict_multi_step_ahead(model, test_input, lead_time):
+
+def predict_multi_step_ahead(model, test_input, lead_time, parallel=False):
     predicted_value = None
 
-    for index_cal in range(0, lead_time):
-        predicted_value = model.predict(test_input)
-        test_input = np.append(test_input[:, 1:], np.array([predicted_value]).T, 1)
+    if parallel:
+        for index_cal in range(0, lead_time):
+            predicted_value = model.predict(test_input)
+            np.append(test_input[:, 1:], predicted_value, 1)
+
+    else:
+        for index_cal in range(0, lead_time):
+            predicted_value = model.predict(test_input)
+            test_input = np.append(test_input[:, 1:], np.array([predicted_value]).T, 1)
 
     return predicted_value
+
 
 def make_metadata(model_structure, *metadata):
     history_length = 'Using ' + str(md.history_size) + ' stpes'
@@ -39,6 +48,7 @@ def make_metadata(model_structure, *metadata):
         training = 'Training: ' + str(metadata[2]) + ' times'
 
         return ' / '.join(['LSTM', history_length, predict_length, stack, batch_size, training])
+
 
 def make_result_file_dir(model_structure, axis_idx, pred_error, file_path, file_attribute, *metadata):
     used_data_file = file_path.split('/')[-1].split('.')[0]
@@ -56,10 +66,11 @@ def make_result_file_dir(model_structure, axis_idx, pred_error, file_path, file_
 
     return used_data_file, result_path + file_attribute + '/', f_name + saved_file_format
 
+
 def save_result(model, axis_index, cal_y, real_y, file_name, sav_dir, saved_file_name, additional_data):
     # Plot outputs
     fig = plt.figure()
-    fig.suptitle(file_name, fontsize=14, fontweight='bold')
+    fig.suptitle('_'.join([file_name, axis_str[axis_index]]), fontsize=14, fontweight='bold')
     ax = fig.add_subplot(111)
 
     fig.subplots_adjust(top=0.85)
@@ -85,11 +96,13 @@ def save_result(model, axis_index, cal_y, real_y, file_name, sav_dir, saved_file
 
     plt.savefig(sav_dir + saved_file_name, bbox_inches='tight', Frameon=True)
 
+
 def calculate_error_measure(cal_y, real_y):
     rmse = np.sqrt(np.mean((cal_y - real_y) ** 2))
     mae = np.mean(np.abs(cal_y - real_y))
     mape = np.mean(np.abs(np.divide(cal_y - real_y, real_y)) * 100)
     return rmse, mae, mape
+
 
 def save_to_error_trunk(model, axis, file_name, *errors):
     for idx, value in enumerate(errors):
@@ -99,6 +112,7 @@ def save_to_error_trunk(model, axis, file_name, *errors):
 
         insert_val = value if value < 5000 else 5000
         error[model][idx][file_name].insert(axis, insert_val)
+
 
 def show_measure(model, axis_index, file_name):
     # The mean square error

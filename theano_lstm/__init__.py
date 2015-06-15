@@ -25,8 +25,10 @@ import theano, theano.tensor as T
 import numpy as np
 from collections import OrderedDict
 
-srng = theano.tensor.shared_randomstreams.RandomStreams(1234)
-np_rng = np.random.RandomState(1234)
+random_number = np.random.randint(100000)
+srng = theano.tensor.shared_randomstreams.RandomStreams(random_number)
+np_rng = np.random.RandomState(random_number)
+
 
 from .masked_loss import masked_loss, masked_loss_dx
 from .shared_memory import wrap_params, borrow_memory, borrow_all_memories
@@ -367,7 +369,9 @@ class LSTM(RNN):
             obs = T.concatenate([x, prev_h], axis=1)
         else:
             obs = T.concatenate([x, prev_h])
-        # TODO could we combine these 4 linear transformations for efficiency? (e.g., http://arxiv.org/pdf/1410.4615.pdf, page 5)
+        # TODO could we combine these 4 linear transformations for efficiency?
+        # (e.g., http://arxiv.org/pdf/1410.4615.pdf, page 5)
+
         # how much to add to the memory cells
         in_gate = self.in_gate.activate(obs)
 
@@ -380,7 +384,7 @@ class LSTM(RNN):
         # new memory cells
         next_c = forget_gate * prev_c + in_gate2 * in_gate
 
-        # modulate the memory cells to create the new output
+        # modulate the memory c ells to create the new output
         out_gate = self.out_gate.activate(obs)
 
         # new hidden output

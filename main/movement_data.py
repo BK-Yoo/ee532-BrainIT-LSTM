@@ -1,9 +1,14 @@
 __author__ = 'bk'
 
-
+import operator
 import numpy as np
 import os
-from random import randint
+
+# Used when the next value is delay-step-ahead value.
+NEXT = 1
+
+random_number = np.random.randint(100000)
+np_rng = np.random.RandomState(random_number)
 
 # put the path to folder
 data_root_path = '/home/bk/KAIST/Brian IT/data/'
@@ -14,13 +19,15 @@ testing_time  = 60  # sec
 freq          = 50  # Hz, Data acquisition frequency
 delay_time    = 0.2 # sec, system latency time
 delay_step    = int(delay_time * freq) # delay step
-history_size  = 30
+history_size  = 2
 num_of_axis   = 3
 training_size = training_time * freq
 testing_size = testing_time * freq
 
 
-normal_file_list = ['t_DB13_Fx1', 't_DB26_Fx3']
+nan_file_list = ['t_DB29_Fx4_hilum', 't_DB03_Fx2', 't_DB44_Fx1']
+
+test_file_list = ['t_DB13_Fx1', 't_DB34_Fx2', 't_DB18_Fx1']
 
 # notorious data set
 outlier_file_list = ['t_DB39_Fx3a', 't_DB17_Fx1', 't_DB33_Fx3', 't_DB45_Fx3', ' t_DB39_Fx3a',
@@ -28,37 +35,63 @@ outlier_file_list = ['t_DB39_Fx3a', 't_DB17_Fx1', 't_DB33_Fx3', 't_DB45_Fx3', ' 
 
 complex_pattern_file_list = ['t_DB17_Fx1', 't_DB44_Fx1', 't_DB37_Fx1', 't_DB25_Fx3', 't_DB43_Fx3']
 
-chaotic_pattern_file_list = ['t_DB22_Fx3', 't_DB03_Fx1b']
+# chaotic_pattern_file_list = ['t_DB22_Fx3', 't_DB03_Fx1b']
 
 big_fluctuation_file_list = ['t_DB45_Fx1', 't_DB22_Fx1', 't_DB22_Fx2']
 
+# 't_DB42_Fx1a', too big fluctuation
+chaotic_pattern_file_list_total = ['t_DB44_Fx1', 't_DB22_Fx3', 't_DB17_Fx2',
+                                   't_DB05_RLL_Fx1']
 
-file_list = {'normal': normal_file_list, 'outlier': outlier_file_list,
-             'complex': complex_pattern_file_list, 'chaotic': chaotic_pattern_file_list,
-             'fluctuation': big_fluctuation_file_list}
+chaotic_pattern_file_list_train = ['t_DB17_Fx2', 't_DB40_Fx1', 't_DB22_Fx3', 't_DB17_Fx3',
+                                   't_DB36_Fx2_liver', 't_DB45_Fx1']
+
+chaotic_pattern_file_list_test = ['t_DB42_Fx2', 't_DB43_Fx2', 't_DB29_Fx2_hilum', 't_DB22_Fx3',
+                                  't_DB15_Fx3', 't_DB17_Fx1']
+
+file_list = {'test': test_file_list, 'outlier': outlier_file_list,
+             'complex': complex_pattern_file_list,
+             'chaotic_t': chaotic_pattern_file_list_total,
+             'chaotic_tr': chaotic_pattern_file_list_train,
+             'chaotic_te': chaotic_pattern_file_list_test,
+             'fluctuation': big_fluctuation_file_list, 'nan': nan_file_list}
 
 
 def get_file_list(attribute='total'):
     if attribute == 'total':
         return [data_root_path + data_file_path for data_file_path in os.listdir(data_root_path)]
+
+    elif attribute == 'normal':
+        abnormal_file_list = [element for key in file_list for element in file_list[key]]
+        return [data_root_path + data_file_path for data_file_path in os.listdir(data_root_path)
+                if data_file_path.split('.')[0] not in abnormal_file_list]
+
     else:
         return [data_root_path + data_file_path for data_file_path in os.listdir(data_root_path)
                 if data_file_path.split('.')[0] in file_list[attribute]]
 
-def load_raw_data(path):
-    data = [[], [], []]
+def load_raw_data(path, normalize):
+    data_non_parallel = [[], [], []]
     print 'now, dive into '+path+'...'
     with open(path, mode='r') as data_file:
         for data_row in data_file:
             try:
-                x, y, z, dummy = [float(element) for element in data_row.split()]
-                data[0].append(x)
-                data[1].append(y)
-                data[2].append(z)
+                x, y, z, _ = [float(element) for element in data_row.split()]
+
+                data_non_parallel[0].append(x)
+                data_non_parallel[1].append(y)
+                data_non_parallel[2].append(z)
 
             except ValueError:
                 continue
-    return data
+
+    if normalize:
+        data_non_parallel = [normalize_vector(col_data) for col_data in data_non_parallel]
+
+    data_non_parallel = np.array(data_non_parallel)
+    data_parallel = np.array([row_data for row_data in data_non_parallel.T])
+
+    return data_parallel, data_non_parallel
 
 def normalize_vector(target_vector):
     target_vector_np = np.array(target_vector)
@@ -67,67 +100,84 @@ def normalize_vector(target_vector):
 
     return (target_vector_np - mean)/std
 
-def preprocessing_data(total_raw_data, normalize=False):
-    # movement matrix as [x, y, z]
-    x_train = [[], [], []]
-    y_train = [[], [], []]
+def create_test_init_point(total_raw_data):
+    return 7000 # np_rng.randint(training_size+1, len(total_raw_data) - testing_size)
 
-    x_test = [[], [], []]
-    y_test = [[], [], []]
+def preprocessing_data(total_raw_data, test_init_point, parallel=False):
 
-    for axis_index in range(0, num_of_axis):
-        train_data = total_raw_data[axis_index][:training_size]
+    if parallel:
+        x_train, y_train, x_test, y_test = [], [], [], []
 
-        # get random test sample from data.
-        test_init_point = randint(training_size+1, len(total_raw_data[axis_index]) - testing_size)
-        test_data = total_raw_data[axis_index][test_init_point: test_init_point + testing_size]
+        train = total_raw_data[:training_size, :]
+        test = total_raw_data[test_init_point:test_init_point+testing_size, :]
 
-        training_session = training_size - history_size
+        for row_idx in range(0, len(train) - history_size - delay_step):
+            x_train.append([mov_data for h_step in range(0, history_size) for mov_data in train[row_idx + h_step]])
+            y_train.append(train[row_idx + history_size, :])
 
-        # end of training session becomes the start of testing session
-        testing_session = training_size
+        for row_idx in range(0, len(test) - history_size - delay_step):
+            x_test.append([mov_data for h_step in range(0, history_size) for mov_data in test[row_idx + h_step]])
+            y_test.append(test[row_idx + history_size + delay_step, :])
 
-        max_iteration = training_size + testing_size - delay_step - history_size + 1
-
-        for index in range(0, max_iteration):
-            if index < training_session:
-                index_train = index
-                x_train[axis_index].append(train_data[index_train:(index_train + history_size)])
-
-                # use one step ahead value to training the regression model
-                index_train_y = index_train + history_size
-                y_train[axis_index].append(train_data[index_train_y])
-
-            elif index >= testing_session:
-                index_test = index - training_size
-                x_test[axis_index].append(test_data[index_test:(index_test + history_size)])
-
-                # use the number of delay_step ahead value to training the regression model
-                index_test_y = index_test + history_size + delay_step - 1
-                y_test[axis_index].append(test_data[index_test_y])
-
-    if normalize:
-        x_train_norm = [normalize_vector(x_train_axis) for x_train_axis in x_train]
-        y_train_norm = [normalize_vector(y_train_axis) for y_train_axis in y_train]
-        x_test_norm = [normalize_vector(x_test_axis) for x_test_axis in x_test]
-        y_test_norm = [normalize_vector(y_test_axis) for y_test_axis in y_test]
-
-        return x_train_norm, y_train_norm, x_test_norm, y_test_norm
-
-    else:
         return np.array(x_train), np.array(y_train), np.array(x_test), np.array(y_test)
 
+    else:
+        # movement matrix as [x, y, z]
+        x_train = [[], [], []]
+        y_train = [[], [], []]
 
-def load_data_set(path_to_data, normalize=True):
-    raw_data = load_raw_data(path_to_data)
+        x_test = [[], [], []]
+        y_test = [[], [], []]
 
-    # Split the data and the targets into training/testing sets
-    return preprocessing_data(raw_data, normalize)
+        for axis_index in range(0, num_of_axis):
+            train_data = total_raw_data[axis_index][:training_size]
+
+            # get random test sample from data.
+            test_data = total_raw_data[axis_index][test_init_point: test_init_point + testing_size]
+
+            for row_index in range(0, len(train_data) - history_size - delay_step):
+                x_train[axis_index].append(train_data[row_index:(row_index + history_size)])
+
+                # use one step ahead value to training the regression model
+                index_train_y = row_index + history_size + delay_step
+                y_train[axis_index].append(train_data[index_train_y])
+
+            for row_index in range(0, len(test_data) - history_size - delay_step):
+                x_test[axis_index].append(test_data[row_index:(row_index + history_size)])
+
+                # use the number of delay_step ahead value to training the regression model
+                y_test[axis_index].append(test_data[row_index + history_size + delay_step])
+
+        return np.array(x_train), np.array(y_train), np.array(x_test), np.array(y_test)
 
 if __name__ == "__main__":
-    test_file_list = [file_path for file_path in get_file_list('normal')]
-    x_train, y_train, x_test, y_test = load_data_set(test_file_list[0], False)
+    std_dict_train = {}
+    std_dict_test = {}
+    # std_dict_x = {}
+    # std_dict_y = {}
+    # std_dict_z = {}
+    for f_name in get_file_list():
+        _, raw_data_n_p = load_raw_data(f_name, False)
+        _, y_train, _, y_test = preprocessing_data(raw_data_n_p, create_test_init_point(raw_data_n_p))
+        std_dict_train[f_name] = sum([np.std(axis_data) for axis_data in y_train])
+        std_dict_test[f_name] = sum([np.std(axis_data) for axis_data in y_test])
+        # std_dict_x[f_name], std_dict_y[f_name], std_dict_z[f_name] = [np.std(axis_data) for axis_data in raw_data_n_p]
 
-    print len(x_test[0])
+    # sorted_x = sorted(std_dict_x, key=operator.itemgetter(1))
+    # sorted_y = sorted(std_dict_y, key=operator.itemgetter(1))
+    # sorted_z = sorted(std_dict_z, key=operator.itemgetter(1))
+
+    sorted_std_key_train = sorted(std_dict_train, key=std_dict_train.get, reverse=True)
+    sorted_std_key_test = sorted(std_dict_test, key=std_dict_test.get, reverse=True)
+
+    print [key.split('/')[-1].split('.')[0] for key in sorted_std_key_train if std_dict_train[key] > 3]
+    print '================================'
+    print ''
+
+    print [key.split('/')[-1].split('.')[0] for key in sorted_std_key_test if std_dict_test[key] > 3]
+
+
+
+# chaotic ['t_DB22_Fx3', 't_DB03_Fx1b']
 
 
