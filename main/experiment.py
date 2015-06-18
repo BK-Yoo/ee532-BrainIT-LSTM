@@ -16,9 +16,15 @@ history_size = 10
 slice_step = 1
 
 # lstm parameter
+# 1,2 stack, non parallel, 100 seconds train, 0.93
+# 1_1 stack, 150 seconds, 10 history, 50 epochs 0.6
+
+# 2 stack, 100 seconds train, 0.52
 stack = 1
 parallel = True
-rho = 0.93 # non parallel to 0.93
+training_method = 'adadelta'
+rho = 0.62
+
 epochs = 50
 
 def do_experiment(f_attr):
@@ -31,7 +37,8 @@ def do_experiment(f_attr):
         train_init_point = md.create_test_init_point(raw_data_parallel)
 
         lstm_raw_data = raw_data_parallel if parallel else raw_data_non_parallel
-        lstm.train_lstm(stack, parallel, rho, epochs, slice_step,
+        lstm.train_lstm(stack, parallel,
+                        training_method, rho, epochs, slice_step,
                         lstm_raw_data, train_init_point, data_file_path, f_attr)
 
         reg.train_regression(raw_data_non_parallel, train_init_point, data_file_path, f_attr)

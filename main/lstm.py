@@ -14,7 +14,6 @@ Using Raiman's theano_rnn library and referencing his tutorial.
 
 import theano
 import theano.tensor as T
-
 from theano_lstm import *
 
 import movement_data as md
@@ -60,8 +59,8 @@ class Model:
     what size their memory should be, and how many
     words can be predicted.
     """
-    def __init__(self, hidden_size, input_size, output_size, rho, stack_size=1,  celltype=LSTM,
-                 parallel=False):
+    def __init__(self, hidden_size, input_size, output_size, t_method, rho, slice,
+                 stack_size=1, celltype=LSTM, parallel=False):
         self.rho = rho
         self.parallel = parallel
 
@@ -70,8 +69,10 @@ class Model:
 
         # self.model.layers.insert(0, Embedding(vocab_size, input_size))
         # add a classifier:
-        # self.model.layers.append(Layer(input_size, hidden_size, activation=lambda x: x))
+        self.model.layers.append(Layer(input_size, hidden_size, activation=lambda x: x))
         self.model.layers.append(Layer(hidden_size, output_size, activation=lambda x: x))
+
+        self.shapes = [(slice, layer.input_size) for layer in self.model.layers]
 
         # inputs are matrices of indices,
         # each row is a sentence, each column a timestep
@@ -84,20 +85,20 @@ class Model:
         # set target value of prediction
         self.target_value = T.fmatrix("target_mat") if self.parallel else T.fvector("target_vet")
 
+        # create drouput method
+        self.masks = MultiDropout(self.shapes, 0.7)
+
         # create symbolic variables for prediction:
         self.predictions = self.create_prediction()
 
         # create gradient training functions:
         self.cost = self.create_cost_fun()
         self.pred_fun = self.create_predict_function()
-        self.update_fun = self.create_training_function()
+        self.update_fun = self.create_training_function(t_method)
 
     @property
     def params(self):
         return self.model.params
-
-    def initialize(self):
-        self.model.initialize()
 
     def create_prediction(self):
 
@@ -108,7 +109,7 @@ class Model:
             # print "hidden state: ", states
             # print "hidden state dimension: ", states[-1].ndim
 
-            new_states = self.model.forward(x, states)
+            new_states = self.model.forward(x, states) #, self.masks)
             # print "result of step function:", [new_states[-1]] + new_states[:-1]
 
             # return [T.concatenate([x[:, get_rid_of_past_x:], new_states[-1]], 1)] + new_states[:-1]
@@ -141,8 +142,8 @@ class Model:
             allow_input_downcast=True
         )
 
-    def create_training_function(self):
-        updates, _, _, _, _ = create_optimization_updates(self.cost, self.params, rho=self.rho, method="adadelta")
+    def create_training_function(self, t_method):
+        updates, _, _, _, _ = create_optimization_updates(self.cost, self.params, rho=self.rho, method=t_method)
         return theano.function(
             # inputs=[self.input_mat, self.target_value, self.timestep],
             inputs=[self.input_mat, self.target_value],
@@ -150,18 +151,17 @@ class Model:
             updates=updates,
             allow_input_downcast=True)
 
-    def update(self, input_x, output_y):
-        self.update_fun(input_x, output_y)
-
     def predict(self, x_mat):
         pred = self.pred_fun(x_mat)
         return pred if self.parallel else pred[:, 0]
 
-def build_movement_lstm_model(stack, rho, parallel):
+def build_movement_lstm_model(stack, t_method, slice, rho, parallel):
     return Model(
         input_size=3 * md.history_size if parallel else md.history_size,
         hidden_size=3 * md.history_size if parallel else md.history_size,
         output_size=3 if parallel else 1,
+        slice=slice,
+        t_method=t_method,
         rho=rho,
         stack_size=stack, # make this bigger, but makes compilation slow
         celltype=LSTM, # use RNN or LSTM
@@ -169,12 +169,12 @@ def build_movement_lstm_model(stack, rho, parallel):
         )
 
 
-def train_lstm(stack, parallel, rho, epoch, slice, raw_data, train_point, data_file_path, file_attribute):
+def train_lstm(stack, parallel, t_method, rho, epoch, slice, raw_data, train_point, data_file_path, file_attribute):
 
     x_train, y_train, x_test, y_test = md.preprocessing_data(raw_data, train_point, parallel=parallel)
 
     if parallel:
-        model = build_movement_lstm_model(stack, rho, parallel)
+        model = build_movement_lstm_model(stack, t_method, slice, rho, parallel)
 
         start_time = datetime.datetime.now()
         for i in range(1, epoch+1):
