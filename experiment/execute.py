@@ -1,15 +1,15 @@
+# -*- coding: utf-8 -*-
 __author__ = 'bk'
 
-
-import movement_data as md
-import lstm
-import reg
-import utils
+from input import extractor as md
+from model import reg
+from model.raiman import raiman_lstm
+from experiment import utils
 
 file_attribute = ['normal', 'outlier', 'complex', 'chaotic', 'fluctuation']
 file_format = '.png'
 
-# data parameter
+# input parameter
 normalize = False
 delay_step = 10
 history_size = 10
@@ -27,6 +27,7 @@ rho = 0.62
 
 epochs = 50
 
+
 def do_experiment(f_attr):
     md.delay_step = delay_step
     md.history_size = history_size
@@ -37,16 +38,14 @@ def do_experiment(f_attr):
         train_init_point = md.create_test_init_point(raw_data_parallel)
 
         lstm_raw_data = raw_data_parallel if parallel else raw_data_non_parallel
-        lstm.train_lstm(stack, parallel,
+        raiman_lstm.train_lstm(stack, parallel,
                         training_method, rho, epochs, slice_step,
                         lstm_raw_data, train_init_point, data_file_path, f_attr)
 
         reg.train_regression(raw_data_non_parallel, train_init_point, data_file_path, f_attr)
 
-if __name__ == '__main__':
 
-    # for attr in file_attribute:
-    #     do_experiment(attr)
-    do_experiment('normal')
+if __name__ == '__main__':
+    do_experiment('small_test')
     utils.show_final_error_result()
     utils.init_error()

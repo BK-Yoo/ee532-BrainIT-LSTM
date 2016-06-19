@@ -33,7 +33,7 @@ var/
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
+# Unit experiment / coverage reports
 htmlcov/
 .tox/
 .coverage
@@ -55,3 +55,9 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Respiration input path
+resources/data/
+
+# Learning Result
+result/

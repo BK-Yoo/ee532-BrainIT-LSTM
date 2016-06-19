@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Small Theano LSTM recurrent network module.
 
@@ -18,7 +19,7 @@ random number generators are dealt with in Theano's scan.
 
 Using Raiman's theano_rnn for making lung movement time-series.
 [here](https://github.com/JonathanRaiman/theano_lstm)
-Some comments and code are modifed.
+Some comments and code are modified.
 """
 
 import theano, theano.tensor as T
@@ -206,7 +207,7 @@ class Embedding(Layer):
         return [self.embedding_matrix]
 
     # Deleting setter means that
-    # this layer will not learn data.
+    # this layer will not learn input.
     @params.setter
     def params(self, param_list):
         self.embedding_matrix.set_value(param_list[0].get_value())
@@ -636,4 +637,4 @@ __all__ = [
     "wrap_params",
     "borrow_memory",
     "borrow_all_memories"
-    ]
+]

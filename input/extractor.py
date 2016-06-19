@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 __author__ = 'bk'
 
-import operator
 import numpy as np
 import os
 
@@ -11,14 +11,15 @@ random_number = np.random.randint(100000)
 np_rng = np.random.RandomState(random_number)
 
 # put the path to folder
-data_root_path = '/home/bk/KAIST/Brian IT/data/'
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+data_root_path = os.path.join(BASE_DIR, 'resources/data/')
 
-# the properties of data used
+# the properties of input used
 training_time = 120  # sec
-testing_time  = 60  # sec
-freq          = 50  # Hz, Data acquisition frequency
-delay_time    = 0.2 # sec, system latency time
-delay_step    = int(delay_time * freq) # delay step
+testing_time  = 60   # sec
+freq          = 50   # Hz, Data acquisition frequency
+delay_time    = 0.2  # sec, system latency time
+delay_step    = int(delay_time * freq)  # delay step
 history_size  = 2
 num_of_axis   = 3
 training_size = training_time * freq
@@ -45,7 +46,7 @@ final_test_list = ['t_DB15_Fx2', 't_DB14_Fx3', 't_DB24_Fx4', 't_DB15_Fx1', 't_DB
 
 small_test_file_list = ['t_DB13_Fx1', 't_DB34_Fx2', 't_DB18_Fx1']
 
-# notorious data set
+# notorious input set
 outlier_file_list = ['t_DB39_Fx3a', 't_DB17_Fx1', 't_DB33_Fx3', 't_DB45_Fx3', ' t_DB39_Fx3a',
                      't_DB42_Fx1a', 't_DB09_Fx2', 't_DB22_Fx2', 't_DB42_Fx1b', 't_DB42_Fx2', 't_DB40_Fx1']
 
@@ -79,14 +80,15 @@ def get_file_list(attribute='total'):
     if attribute == 'total':
         return [data_root_path + data_file_path for data_file_path in os.listdir(data_root_path)]
 
-    # elif attribute == 'normal':
-    #     abnormal_file_list = [element for key in file_list for element in file_list[key]]
-    #     return [data_root_path + data_file_path for data_file_path in os.listdir(data_root_path)
-    #             if data_file_path.split('.')[0] not in abnormal_file_list]
+    elif attribute == 'normal':
+        abnormal_file_list = [element for key in file_list for element in file_list[key]]
+        return [data_root_path + data_file_path for data_file_path in os.listdir(data_root_path)
+                if data_file_path.split('.')[0] not in abnormal_file_list]
 
     else:
         return [data_root_path + data_file_path for data_file_path in os.listdir(data_root_path)
                 if data_file_path.split('.')[0] in file_list[attribute]]
+
 
 def load_raw_data(path, normalize):
     data_non_parallel = [[], [], []]
@@ -111,6 +113,7 @@ def load_raw_data(path, normalize):
 
     return data_parallel, data_non_parallel
 
+
 def normalize_vector(target_vector):
     target_vector_np = np.array(target_vector)
     std = np.std(target_vector_np)
@@ -118,10 +121,12 @@ def normalize_vector(target_vector):
 
     return (target_vector_np - mean)/std
 
+
 def create_test_init_point(total_raw_data):
     return 7000 # np_rng.randint(training_size+1, len(total_raw_data) - testing_size)
 
-def preprocessing_data(total_raw_data, test_init_point, parallel=False):
+
+def pre_processing_data(total_raw_data, test_init_point, parallel=False):
 
     if parallel:
         x_train, y_train, x_test, y_test = [], [], [], []
@@ -150,7 +155,7 @@ def preprocessing_data(total_raw_data, test_init_point, parallel=False):
         for axis_index in range(0, num_of_axis):
             train_data = total_raw_data[axis_index][:training_size]
 
-            # get random test sample from data.
+            # get random experiment sample from input.
             test_data = total_raw_data[axis_index][test_init_point: test_init_point + testing_size]
 
             for row_index in range(0, len(train_data) - history_size - delay_step):

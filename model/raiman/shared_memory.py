@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from multiprocessing import sharedctypes
 from numpy import ctypeslib
 import numpy as np

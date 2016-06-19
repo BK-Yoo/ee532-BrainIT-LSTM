@@ -1,14 +1,16 @@
+# -*- coding: utf-8 -*-
 __author__ = 'bk'
 
-import utils
 from sklearn import linear_model
-import movement_data as md
 
-REGR = "reg"
+from input import extractor as md
+from experiment import utils
+from . import *
+
 
 def train_regression(raw_data, train_point, data_file_path, file_attribute):
 
-    x_train, y_train, x_test, y_test = md.preprocessing_data(raw_data, train_point)
+    x_train, y_train, x_test, y_test = md.pre_processing_data(raw_data, train_point)
 
     for axis_index in range(0, 3):
         regr_model = linear_model.LinearRegression()

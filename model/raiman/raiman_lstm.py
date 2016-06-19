@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 """
 =====KAIST EE532 Brain IT Project=====
 
 Using LSTM for making lung movement time-series
-With Lung Movement Data(Composed of 3 axes data, x, y, z)
+With Lung Movement Data(Composed of 3 axes input, x, y, z)
 
 Using Raiman's theano_rnn library and referencing his tutorial.
 [here](https://github.com/JonathanRaiman/theano_lstm)
@@ -12,15 +13,17 @@ Using Raiman's theano_rnn library and referencing his tutorial.
 
 """
 
+import datetime
+
 import theano
 import theano.tensor as T
-from theano_lstm import *
 
-import movement_data as md
-import datetime
-import utils
+from input import extractor as md
+from experiment import utils
+from . import *
 
 lstm = 'lstm'
+
 
 def has_hidden(layer):
     """
@@ -29,8 +32,10 @@ def has_hidden(layer):
     """
     return hasattr(layer, 'initial_hidden_state')
 
+
 def matrixify(vector, n):
     return T.repeat(T.shape_padleft(vector), n, axis=0)
+
 
 def initial_state(layer, dimensions=None):
     """
@@ -44,6 +49,7 @@ def initial_state(layer, dimensions=None):
     else:
         return matrixify(layer.initial_hidden_state, dimensions) if has_hidden(layer) else None
 
+
 def initial_state_with_taps(layer, dimensions=None):
     """Optionally wrap tensor variable into a dict with taps=[-1]"""
     state = initial_state(layer, dimensions)
@@ -51,6 +57,7 @@ def initial_state_with_taps(layer, dimensions=None):
         return dict(initial=state, taps=[-1])
     else:
         return None
+
 
 class Model:
     """
@@ -171,7 +178,7 @@ def build_movement_lstm_model(stack, t_method, slice, rho, parallel):
 
 def train_lstm(stack, parallel, t_method, rho, epoch, slice, raw_data, train_point, data_file_path, file_attribute):
 
-    x_train, y_train, x_test, y_test = md.preprocessing_data(raw_data, train_point, parallel=parallel)
+    x_train, y_train, x_test, y_test = md.pre_processing_data(raw_data, train_point, parallel=parallel)
 
     if parallel:
         model = build_movement_lstm_model(stack, t_method, slice, rho, parallel)
@@ -196,8 +203,8 @@ def train_lstm(stack, parallel, t_method, rho, epoch, slice, raw_data, train_poi
         for axis_index in range(0, 3):
             rmse, mae, mape = utils.calculate_error_measure(pred_t[axis_index], y_test_t[axis_index])
             file_name, file_dir, result_file = utils.make_result_file_dir(lstm, axis_index, rmse,
-                                                                          data_file_path, file_attribute,
-                                                                          stack, slice, epoch)
+                                                                               data_file_path, file_attribute,
+                                                                               stack, slice, epoch)
 
             utils.save_to_error_trunk(lstm, axis_index, file_name, rmse, mae, mape)
             utils.show_measure(lstm, axis_index, file_name)
@@ -234,8 +241,8 @@ def train_lstm(stack, parallel, t_method, rho, epoch, slice, raw_data, train_poi
             rmse, mae, mape = utils.calculate_error_measure(prediction, y_test[axis_index])
 
             file_name, file_dir, result_file = utils.make_result_file_dir(lstm, axis_index, rmse,
-                                                                          data_file_path, file_attribute,
-                                                                          stack, slice, epoch)
+                                                                               data_file_path, file_attribute,
+                                                                               stack, slice, epoch)
 
             utils.save_to_error_trunk(lstm, axis_index, file_name, rmse, mae, mape)
             utils.show_measure(lstm, axis_index, file_name)
@@ -243,7 +250,7 @@ def train_lstm(stack, parallel, t_method, rho, epoch, slice, raw_data, train_poi
                               utils.make_metadata(lstm, stack, slice, epoch))
 
     ##################################################################
-    # training LSTM for all the data and test model to each data file#
+    # training LSTM for all the input and experiment model to each input file#
     ##################################################################
 
     # print "=================training==================="

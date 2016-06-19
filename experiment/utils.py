@@ -1,11 +1,13 @@
+# -*- coding: utf-8 -*-
 __author__ = 'bk'
 
-
-import numpy as np
 import os
-import movement_data as md
-import reg as reg
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+import model
+from input import extractor as md
 
 saved_file_format = '.png'
 axis_str = ['x', 'y', 'z']
@@ -39,7 +41,7 @@ def make_metadata(model_structure, *metadata):
     history_length = 'Using ' + str(md.history_size) + ' stpes'
     predict_length = 'Predict ' + str(md.delay_step) + ' steps'
 
-    if model_structure == reg.REGR:
+    if model_structure == model.REGR:
         return ' / '.join(['Regression', history_length, predict_length])
 
     else:
@@ -53,7 +55,7 @@ def make_metadata(model_structure, *metadata):
 def make_result_file_dir(model_structure, axis_idx, pred_error, file_path, file_attribute, *metadata):
     used_data_file = file_path.split('/')[-1].split('.')[0]
 
-    if model_structure == reg.REGR:
+    if model_structure == model.REGR:
         f_name = '_'.join([str(pred_error), used_data_file, axis_str[axis_idx],
                            str(md.history_size), str(md.delay_step)])
         result_path = result_dir + 'control_group/'
