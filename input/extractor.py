@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 __author__ = 'bk'
 
-import numpy as np
 import os
+
+import numpy as np
+
+from experiment.logger import get_logger
+
+preprocess_logger = get_logger('PreprocessLogger')
 
 # Used when the next value is delay-step-ahead value.
 NEXT = 1
@@ -85,6 +90,9 @@ def get_file_list(attribute='total'):
         return [data_root_path + data_file_path for data_file_path in os.listdir(data_root_path)
                 if data_file_path.split('.')[0] not in abnormal_file_list]
 
+    elif attribute == 'small_test':
+        return [data_root_path + data_file_path + '.txt' for data_file_path in small_test_file_list]
+
     else:
         return [data_root_path + data_file_path for data_file_path in os.listdir(data_root_path)
                 if data_file_path.split('.')[0] in file_list[attribute]]
@@ -92,7 +100,7 @@ def get_file_list(attribute='total'):
 
 def load_raw_data(path, normalize):
     data_non_parallel = [[], [], []]
-    print 'now, dive into '+path+'...'
+    preprocess_logger.info('now, dive into ' + path + '...')
     with open(path, mode='r') as data_file:
         for data_row in data_file:
             try:

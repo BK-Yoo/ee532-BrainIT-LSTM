@@ -61,3 +61,6 @@ resources/data/
 
 # Learning Result
 result/
+
+# Log genereated when training
+log/

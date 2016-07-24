@@ -6,15 +6,22 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+import input.extractor as md
 import model
-from input import extractor as md
+from logger import get_logger
+
+
 
 saved_file_format = '.png'
+
 axis_str = ['x', 'y', 'z']
 
 # rmse, map, mae
 error = {'lstm': [{}, {}, {}], 'reg': [{}, {}, {}]}
+
 result_dir = '../result/'
+
+result_logger = get_logger("ResultLogger")
 
 
 def init_error():
@@ -118,11 +125,11 @@ def save_to_error_trunk(model, axis, file_name, *errors):
 
 def show_measure(model, axis_index, file_name):
     # The mean square error
-    print ('Root Mean Squared Error: %.6f' % error[model][0][file_name][axis_index])
+    result_logger.info('Root Mean Squared Error: %.6f' % error[model][0][file_name][axis_index])
     # The Mean Absolute Error
-    print ('Mean Absolute Error: %.6f' % error[model][1][file_name][axis_index])
+    result_logger.info('Mean Absolute Error: %.6f' % error[model][1][file_name][axis_index])
     # The Mean Absolute Percentage Error
-    print ('Mean Absolute Percentage Error: %.6f' % error[model][2][file_name][axis_index])
+    result_logger.info('Mean Absolute Percentage Error: %.6f' % error[model][2][file_name][axis_index])
 
 
 def show_final_error_result():
@@ -142,19 +149,17 @@ def show_final_error_result():
         total_mae = np.mean(error_array[1])
         total_mape = np.mean(error_array[2])
 
-        print ''
-        print '############' + model + '############'
-        print 'Root Mean Squared Error: %.6f' % total_rmse
-        print 'Top 100'
-        print error_array[0][:100]
+        result_logger.info('############' + model + '############')
+        result_logger.info('Root Mean Squared Error: %.6f' % total_rmse)
+        result_logger.info('Top 100')
+        result_logger.info(error_array[0][:100])
 
-        print 'Mean Absolute Error: %.6f' % total_mae
-        print 'Top 100'
-        print error_array[1][:100]
+        result_logger.info('Mean Absolute Error: %.6f' % total_mae)
+        result_logger.info('Top 100')
+        result_logger.info(error_array[1][:100])
 
-        print 'Mean Absolute Percentage Error: %.6f' % total_mape
-        print ('Top 100')
-        print error_array[2][:100]
+        result_logger.info('Mean Absolute Percentage Error: %.6f' % total_mape)
+        result_logger.info('Top 100')
+        result_logger.info(error_array[2][:100])
 
-        print '######################'
-        print ''
+        result_logger.info('######################')
