@@ -18,8 +18,8 @@ import datetime
 import theano
 import theano.tensor as T
 
-from input import extractor as md
 from experiment import utils
+from input import extractor as md
 from . import *
 
 lstm = 'lstm'
@@ -161,6 +161,7 @@ class Model:
     def predict(self, x_mat):
         pred = self.pred_fun(x_mat)
         return pred if self.parallel else pred[:, 0]
+
 
 def build_movement_lstm_model(stack, t_method, slice, rho, parallel):
     return Model(

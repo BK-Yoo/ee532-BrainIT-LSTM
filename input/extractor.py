@@ -180,5 +180,3 @@ def pre_processing_data(total_raw_data, test_init_point, parallel=False):
                 y_test[axis_index].append(test_data[row_index + history_size + delay_step])
 
         return np.array(x_train), np.array(y_train), np.array(x_test), np.array(y_test)
-
-# chaotic ['t_DB22_Fx3', 't_DB03_Fx1b']

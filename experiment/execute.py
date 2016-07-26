@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 __author__ = 'bk'
 
+from experiment import utils
 from input import extractor as md
 from model import reg
 from model.raiman import raiman_lstm
-from experiment import utils
+
+lstm_models = {'bk': None, 'cho': None, 'raiman': raiman_lstm}
 
 file_attribute = ['normal', 'outlier', 'complex', 'chaotic', 'fluctuation']
 file_format = '.png'
@@ -38,11 +40,22 @@ def do_experiment(f_attr):
         train_init_point = md.create_test_init_point(raw_data_parallel)
 
         lstm_raw_data = raw_data_parallel if parallel else raw_data_non_parallel
-        raiman_lstm.train_lstm(stack, parallel,
+        model = train_lstm('raiman')
+        model.train_lstm(stack, parallel,
                         training_method, rho, epochs, slice_step,
                         lstm_raw_data, train_init_point, data_file_path, f_attr)
 
         reg.train_regression(raw_data_non_parallel, train_init_point, data_file_path, f_attr)
+
+
+def train_lstm(model):
+    if model == "bk":
+        model = None
+    elif model == 'cho':
+        model = None
+    elif model == 'raiman':
+        model = lstm_models[model]
+    return model
 
 
 if __name__ == '__main__':

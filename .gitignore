@@ -64,3 +64,6 @@ result/
 
 # Log genereated when training
 log/
+
+# Kyunghyun Cho's lstm tutorial data
+/model/cho/reference/data/
